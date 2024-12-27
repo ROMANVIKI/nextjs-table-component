@@ -60,7 +60,7 @@ export default function ThemeDropdown() {
       {/* Modal */}
       {isModalOpen && (
         <div data-theme={currentTheme} className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75">
-          <div className="rounded-lg p-6 w-11/12 max-w-lg mx-auto shadow-lg">
+          <div data-theme={currentTheme} className="rounded-lg p-6 w-11/12 max-w-lg mx-auto shadow-lg">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-semibold">Choose Theme</h2>
               <button

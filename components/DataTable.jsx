@@ -1,82 +1,53 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Calendar, Search, SortAsc, SortDesc, Check, Download } from "lucide-react";
 import { format } from "date-fns";
-import {useContext} from 'react'
-import ThemeContext from '../app/page'
-import Dropdown from './Dropdown'
-
-const sampleData = [
-  {
-    code: "TASK-7393",
-    title: "We need to program the redundant EXE array!",
-    status: "todo",
-    priority: "medium",
-    archived: false,
-    createdAt: new Date("Thu Dec 26 2024 07:54:59 GMT+0530")
-  },
-  {
-    code: "TASK-7692",
-    title: "Try to input the UDP bandwidth, maybe it will input the solid state feed!",
-    status: "in-progress",
-    priority: "medium",
-    archived: true,
-    createdAt: new Date("Thu Dec 26 2024 07:54:59 GMT+0530")
-  },
-  {
-    code: "TASK-3322",
-    title: "Use the 1080p DRAM interface, then you can reboot the online circuit!",
-    status: "done",
-    priority: "high",
-    archived: false,
-    createdAt: new Date("Thu Dec 26 2024 07:54:59 GMT+0530")
-  }
-];
+import { useContext } from 'react';
+import { ThemeContext } from '../app/page';
+import Dropdown from './Dropdown';
+import axios from 'axios';
 
 const statusColors = {
   todo: "badge-warning",
+  Todo: "badge-warning",
   "in-progress": "badge-info",
   done: "badge-success",
+  Done: "badge-success",
+  Canceled: "badge-error",
   canceled: "badge-error"
 };
 
 const priorityColors = {
   low: "badge-ghost",
+  Low: "badge-ghost",
   medium: "badge-warning",
-  high: "badge-error"
+  Medium: "badge-warning",
+  high: "badge-error",
+  High: "badge-error"
+
 };
 
-const PAGE_SIZE_OPTIONS = [10, 20, 30, 50, 100];
+const PAGE_SIZE_OPTIONS = [5, 10, 20, 30, 50, 100];
 
 // Utility function for CSV export
 const exportToCSV = (data, filename) => {
-  // Get headers from the first data item
   const headers = Object.keys(data[0]);
-  
-  // Convert data to CSV format
   const csvContent = [
-    // Headers row
     headers.join(','),
-    // Data rows
     ...data.map(row => 
       headers.map(header => {
         let cellData = row[header];
-        
-        // Format date if the field is createdAt
-        if (header === 'createdAt') {
-          cellData = format(new Date(cellData), "MMM d, yyyy"); }
-        
-        // Handle fields that might contain commas
+        if (header === 'created_at') {
+          cellData = format(new Date(cellData), "MMM d, yyyy");
+        }
         if (typeof cellData === 'string' && cellData.includes(',')) {
           cellData = `"${cellData}"`;
         }
-        
         return cellData;
       }).join(',')
     )
   ].join('\n');
 
-  // Create blob and download
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
   const link = document.createElement('a');
   const url = URL.createObjectURL(blob);
@@ -88,7 +59,12 @@ const exportToCSV = (data, filename) => {
 };
 
 export default function DataTable() {
-  const [data] = useState(sampleData);
+  const { setCurrentTheme } = useContext(ThemeContext);
+  const [tableData, setTableData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  
+  // States for filters and pagination
   const [filter, setFilter] = useState("");
   const [sortColumn, setSortColumn] = useState(null);
   const [sortOrder, setSortOrder] = useState("asc");
@@ -99,6 +75,26 @@ export default function DataTable() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [priorityFilter, setPriorityFilter] = useState("all");
   const [itemsPerPage, setItemsPerPage] = useState(10);
+
+  useEffect(() => {
+    const fetchTableData = async () => {
+      try {
+        const response = await axios.get('http://localhost:8000/api/list-data/');
+        const formattedData = response.data.map(item => ({
+          ...item,
+          created_at: new Date(item.created_at)
+        }));
+        setTableData(formattedData);
+      } catch (err) {
+        setError(err.message);
+        console.error('Error fetching data:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTableData();
+  }, []);
 
   const handleSort = (column) => {
     if (sortColumn === column) {
@@ -129,7 +125,7 @@ export default function DataTable() {
 
   const handleItemsPerPageChange = (newSize) => {
     setItemsPerPage(newSize);
-    setCurrentPage(1); // Reset to first page when changing items per page
+    setCurrentPage(1);
   };
 
   const handleExport = () => {
@@ -141,7 +137,7 @@ export default function DataTable() {
     exportToCSV(dataToExport, `tasks_export_${timestamp}.csv`);
   };
 
-  const filteredData = data.filter((item) => {
+  const filteredData = tableData.filter((item) => {
     const matchesSearch = Object.values(item)
       .join(" ")
       .toLowerCase()
@@ -150,7 +146,7 @@ export default function DataTable() {
     const matchesStatus = statusFilter === "all" || item.status === statusFilter;
     const matchesPriority = priorityFilter === "all" || item.priority === priorityFilter;
     
-    const itemDate = new Date(item.createdAt);
+    const itemDate = new Date(item.created_at);
     const matchesDateRange = (!startDate || itemDate >= new Date(startDate)) &&
                            (!endDate || itemDate <= new Date(endDate));
 
@@ -162,7 +158,7 @@ export default function DataTable() {
       const aValue = a[sortColumn];
       const bValue = b[sortColumn];
       
-      if (sortColumn === 'createdAt') {
+      if (sortColumn === 'created_at') {
         return sortOrder === "asc" 
           ? new Date(aValue) - new Date(bValue)
           : new Date(bValue) - new Date(aValue);
@@ -180,11 +176,8 @@ export default function DataTable() {
     currentPage * itemsPerPage
   );
 
-  
-
-
   return (
-    <div className="container mx-auto p-2 sm:p-4 h-screen w-full">
+    <div className="container mx-auto p-2 pb-6 sm:p-4 h-screen w-full">
       {/* Filters Section */}
       <Dropdown/>
       <div className="space-y-4 mb-4">
@@ -257,7 +250,23 @@ export default function DataTable() {
       </div>
 
       {/* Table Section */}
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto relative">
+        {loading ? (
+          <div className="absolute inset-0 bg-base-100/50 flex justify-center items-center">
+            <span className="loading loading-spinner loading-lg"></span>
+          </div>
+        ) : error ? (
+          <div className="text-center p-4 text-error">
+            <p>Error loading data: {error}</p>
+            <button 
+              onClick={() => window.location.reload()} 
+              className="btn btn-error btn-sm mt-2"
+            >
+              Retry
+            </button>
+          </div>
+        ) : null}
+        
         <table className="table table-zebra w-full">
           <thead>
             <tr>
@@ -300,7 +309,7 @@ export default function DataTable() {
                 <td>{item.title}</td>
                 <td>
                   <div className={`badge ${statusColors[item.status]} w-full`}>
-                    {item.status}
+                    {item.status === 'in-progress' ? "inprogress":item.status}
                   </div>
                 </td>
                 <td>
@@ -312,7 +321,7 @@ export default function DataTable() {
                   {item.archived ? <Check className="h-4 w-4 text-success" /> : null}
                 </td>
                 <td>
-                  {format(new Date(item.createdAt), "MMM d, yyyy")}
+                  {format(new Date(item.created_at), "MMM d, yyyy")}
                 </td>
               </tr>
             ))}
@@ -358,7 +367,6 @@ export default function DataTable() {
           </button>
           
           {[...Array(totalPages)].map((_, index) => {
-            // Show current page, previous 2 and next 2 pages
             if (
               index + 1 === currentPage ||
               index + 1 === currentPage - 1 ||
