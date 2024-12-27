@@ -177,7 +177,7 @@ export default function DataTable() {
   );
 
   return (
-    <div className="container mx-auto p-2 pb-6 sm:p-4 h-screen w-full">
+    <div className="container mx-auto p-2 pb-6 sm:p-4  w-full">
       {/* Filters Section */}
       <Dropdown/>
       <div className="space-y-4 mb-4">
