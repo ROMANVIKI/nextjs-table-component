@@ -2,6 +2,9 @@
 import { useState } from "react";
 import { Calendar, Search, SortAsc, SortDesc, Check, Download } from "lucide-react";
 import { format } from "date-fns";
+import {useContext} from 'react'
+import ThemeContext from '../app/page'
+import Dropdown from './Dropdown'
 
 const sampleData = [
   {
@@ -61,8 +64,7 @@ const exportToCSV = (data, filename) => {
         
         // Format date if the field is createdAt
         if (header === 'createdAt') {
-          cellData = format(new Date(cellData), "MMM d, yyyy");
-        }
+          cellData = format(new Date(cellData), "MMM d, yyyy"); }
         
         // Handle fields that might contain commas
         if (typeof cellData === 'string' && cellData.includes(',')) {
@@ -178,9 +180,13 @@ export default function DataTable() {
     currentPage * itemsPerPage
   );
 
+  
+
+
   return (
-    <div className="container mx-auto p-2 sm:p-4 w-full">
+    <div className="container mx-auto p-2 sm:p-4 h-screen w-full">
       {/* Filters Section */}
+      <Dropdown/>
       <div className="space-y-4 mb-4">
         <div className="flex flex-col sm:flex-row gap-2 sm:items-center justify-between">
           <div className="flex flex-col sm:flex-row gap-2 sm:items-center flex-1">

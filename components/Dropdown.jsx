@@ -1,101 +1,96 @@
-"use client";
-import { useState, useEffect, useRef } from 'react';
+
+'use client';
+import { useState, useContext } from 'react';
 import { Sun, Moon, Monitor, Palette } from 'lucide-react';
+import { ThemeContext } from '../app/page';
 
 export default function ThemeDropdown() {
-  const [isDropdown, setIsDropdown] = useState(false);
-  const [currentTheme, setCurrentTheme] = useState('system');
-  const dropdownRef = useRef(null);
+  const { setCurrentTheme, currentTheme } = useContext(ThemeContext);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // DaisyUI themes grouped by category
-  const themes = {
-    Light: ['light', 'cupcake', 'bumblebee', 'emerald', 'corporate', 'lofi', 'winter'],
-    Dark: ['dark', 'synthwave', 'cyberpunk', 'night', 'dracula', 'business'],
-    Retro: ['retro', 'valentine', 'garden', 'aqua'],
-    Other: ['cmyk', 'autumn', 'fantasy', 'wireframe', 'luxury', 'coffee']
-  };
+  // const themeIcons = {
+  //   light: <Sun className="w-8 h-8 text-yellow-500" />,
+  //   dark: <Moon className="w-8 h-8 text-gray-800" />,
+  //   system: <Monitor className="w-8 h-8 text-blue-500" />,
+  //   cyberpunk: <Palette className="w-8 h-8 text-pink-500" />,
+  //   cupcake: <Sun className="w-8 h-8 text-pink-400" />,
+  //   bumblebee: <Sun className="w-8 h-8 text-yellow-400" />,
+  //   emerald: <Sun className="w-8 h-8 text-green-500" />,
+  //   corporate: <Monitor className="w-8 h-8 text-blue-600" />,
+  //   synthwave: <Moon className="w-8 h-8 text-purple-500" />,
+  // };
 
-  // Theme icons mapping
-  const themeIcons = {
-    light: <Sun className="w-4 h-4" />,
-    dark: <Moon className="w-4 h-4" />,
-    system: <Monitor className="w-4 h-4" />
-  };
 
-  // Handle click outside to close dropdown
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setIsDropdown(false);
-      }
-    };
+    const themeIcons = {
+  light: <Sun className="w-4 h-4" />,
+   dark: <Moon className="w-4 h-4" />,
+   system: <Monitor className="w-4 h-4" />,
+   cyberpunk: <Palette className="w-4 h-4 text-neon-pink" />,
+   cupcake: <Sun className="w-4 h-4 text-pink-400" />,
+   bumblebee: <Sun className="w-4 h-4 text-yellow-500" />,
+   emerald: <Sun className="w-4 h-4 text-green-500" />,
+   corporate: <Monitor className="w-4 h-4 text-blue-500" />,
+   synthwave: <Moon className="w-4 h-4 text-purple-600" />,
+   retro: <Palette className="w-4 h-4 text-orange-500" />,
+   dracula: <Moon className="w-4 h-4 text-red-600" />,
+   valentine: <Sun className="w-4 h-4 text-pink-600" />,
+   garden: <Sun className="w-4 h-4 text-green-400" />,
+   aqua: <Monitor className="w-4 h-4 text-teal-400" />,
+   business: <Monitor className="w-4 h-4 text-gray-700" />,
+   // Add more themes and their icons here
+ };
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
 
   const setTheme = (theme) => {
-    const html = document.querySelector('html');
-    html.setAttribute('data-theme', theme);
     setCurrentTheme(theme);
-    setIsDropdown(false);
-    // You might want to save the theme preference to localStorage here
+    setIsModalOpen(false);
   };
 
   return (
-    <div ref={dropdownRef} className="relative flex justify-end">
-      <div className="dropdown dropdown-end">
-        <button 
-          onClick={() => setIsDropdown(!isDropdown)}
-          className="btn btn-ghost gap-2 normal-case"
-        >
-          <Palette className="w-4 h-4" />
-          <span className="hidden sm:inline">Theme</span>
-        </button>
+    <div className="relative flex justify-end">
+      {/* Button to open modal */}
+      <button
+        onClick={() => setIsModalOpen(true)}
+        className="btn btn-ghost gap-2 normal-case"
+      >
+        <Palette className="w-6 h-6" />
+        <span className="hidden sm:inline">Theme</span>
+      </button>
 
-        {isDropdown && (
-          <div className="dropdown-content z-[1] menu p-2 shadow-lg bg-base-200 rounded-box w-52 max-h-96 overflow-y-auto">
-            {/* Quick theme options with icons */}
-            <div className="menu-title">Quick Themes</div>
-            <div className="grid grid-cols-3 gap-1 p-1 mb-2">
-              {['light', 'dark', 'system'].map((theme) => (
-                <button
-                  key={theme}
-                  onClick={() => setTheme(theme)}
-                  className={`btn btn-sm ${currentTheme === theme ? 'btn-active' : 'btn-ghost'} gap-2`}
-                >
-                  {themeIcons[theme]}
-                  <span className="capitalize">{theme}</span>
-                </button>
-              ))}
+      {/* Modal */}
+      {isModalOpen && (
+        <div data-theme={currentTheme} className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75">
+          <div className="rounded-lg p-6 w-11/12 max-w-lg mx-auto shadow-lg">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold">Choose Theme</h2>
+              <button
+                onClick={() => setIsModalOpen(false)}
+                className="btn btn-sm btn-circle"
+              >
+                ✕
+              </button>
             </div>
 
-            <div className="divider my-1"></div>
-
-            {/* All DaisyUI themes grouped by category */}
-            {Object.entries(themes).map(([category, categoryThemes]) => (
-              <div key={category}>
-                <div className="menu-title mt-2">{category}</div>
-                {categoryThemes.map((theme) => (
-                  <div
-                    key={theme}
-                    onClick={() => setTheme(theme)}
-                    className={`
-                      flex items-center gap-2 px-4 py-2 rounded-lg cursor-pointer
-                      ${currentTheme === theme ? 'bg-primary text-primary-content' : 'hover:bg-base-300'}
-                    `}
-                  >
-                    <div className="w-4 h-4 rounded-full border-2" style={{
-                      backgroundImage: `linear-gradient(45deg, var(--p) 50%, var(--s) 50%)`
-                    }}></div>
-                    <span className="capitalize">{theme}</span>
-                  </div>
-                ))}
-              </div>
-            ))}
+            {/* Theme Options */}
+            <div data-theme={currentTheme} className="grid grid-cols-3 gap-4" >
+              {Object.entries(themeIcons).map(([theme, icon]) => (
+                <div
+                  key={theme}
+                  onClick={() => setTheme(theme)}
+                  className={`cursor-pointer p-4 rounded-lg flex flex-col items-center justify-center ${
+                    currentTheme === theme
+                      ? 'bg-primary text-primary-content'
+                      : 'hover:bg-gray-100'
+                  }`}
+                >
+                  {icon}
+                  <span className="mt-2 capitalize">{theme}</span>
+                </div>
+              ))}
+            </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
