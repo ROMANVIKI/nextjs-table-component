@@ -79,7 +79,7 @@ export default function DataTable() {
   useEffect(() => {
     const fetchTableData = async () => {
       try {
-        const response = await axios.get('http://localhost:8000/api/list-data/');
+        const response = await axios.get('https://nextjs-table-backend.onrender.com/api/list-data/');
         const formattedData = response.data.map(item => ({
           ...item,
           created_at: new Date(item.created_at)
