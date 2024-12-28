@@ -1,11 +1,23 @@
 "use client";
 import { useState, useEffect } from "react";
-import { Calendar, Search, SortAsc, SortDesc, Check, Download } from "lucide-react";
+import {
+  Calendar,
+  Search,
+  SortAsc,
+  SortDesc,
+  Check,
+  Download,
+  Pencil,
+  GripHorizontal,
+  EllipsisVertical,
+} from "lucide-react";
 import { format } from "date-fns";
-import { useContext } from 'react';
-import { ThemeContext } from '../app/page';
-import Dropdown from './Dropdown';
-import axios from 'axios';
+import { useContext } from "react";
+import { ThemeContext } from "../app/page";
+import Dropdown from "./Dropdown";
+import ModalComponent from "./ModalComponent";
+import axios from "axios";
+import EditModal from "./EditModal.jsx";
 
 const statusColors = {
   todo: "badge-warning",
@@ -14,7 +26,7 @@ const statusColors = {
   done: "badge-success",
   Done: "badge-success",
   Canceled: "badge-error",
-  canceled: "badge-error"
+  canceled: "badge-error",
 };
 
 const priorityColors = {
@@ -23,8 +35,7 @@ const priorityColors = {
   medium: "badge-warning",
   Medium: "badge-warning",
   high: "badge-error",
-  High: "badge-error"
-
+  High: "badge-error",
 };
 
 const PAGE_SIZE_OPTIONS = [5, 10, 20, 30, 50, 100];
@@ -33,26 +44,28 @@ const PAGE_SIZE_OPTIONS = [5, 10, 20, 30, 50, 100];
 const exportToCSV = (data, filename) => {
   const headers = Object.keys(data[0]);
   const csvContent = [
-    headers.join(','),
-    ...data.map(row => 
-      headers.map(header => {
-        let cellData = row[header];
-        if (header === 'created_at') {
-          cellData = format(new Date(cellData), "MMM d, yyyy");
-        }
-        if (typeof cellData === 'string' && cellData.includes(',')) {
-          cellData = `"${cellData}"`;
-        }
-        return cellData;
-      }).join(',')
-    )
-  ].join('\n');
+    headers.join(","),
+    ...data.map((row) =>
+      headers
+        .map((header) => {
+          let cellData = row[header];
+          if (header === "created_at") {
+            cellData = format(new Date(cellData), "MMM d, yyyy");
+          }
+          if (typeof cellData === "string" && cellData.includes(",")) {
+            cellData = `"${cellData}"`;
+          }
+          return cellData;
+        })
+        .join(","),
+    ),
+  ].join("\n");
 
-  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-  const link = document.createElement('a');
+  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+  const link = document.createElement("a");
   const url = URL.createObjectURL(blob);
-  link.setAttribute('href', url);
-  link.setAttribute('download', filename);
+  link.setAttribute("href", url);
+  link.setAttribute("download", filename);
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
@@ -63,7 +76,7 @@ export default function DataTable() {
   const [tableData, setTableData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  
+
   // States for filters and pagination
   const [filter, setFilter] = useState("");
   const [sortColumn, setSortColumn] = useState(null);
@@ -76,18 +89,29 @@ export default function DataTable() {
   const [priorityFilter, setPriorityFilter] = useState("all");
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
+  const [mountModal, setMountModal] = useState(false);
+
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [selectedItem, setSelectedItem] = useState(null);
+
+  const mountModalFunc = () => {
+    setMountModal((prev) => !prev);
+  };
+
   useEffect(() => {
     const fetchTableData = async () => {
       try {
-        const response = await axios.get('https://nextjs-table-backend.onrender.com/api/list-data/');
-        const formattedData = response.data.map(item => ({
+        const response = await axios.get(
+          "https://nextjs-table-backend.onrender.com/api/list-data/",
+        );
+        const formattedData = response.data.map((item) => ({
           ...item,
-          created_at: new Date(item.created_at)
+          created_at: new Date(item.created_at),
         }));
         setTableData(formattedData);
       } catch (err) {
         setError(err.message);
-        console.error('Error fetching data:', err);
+        console.error("Error fetching data:", err);
       } finally {
         setLoading(false);
       }
@@ -95,6 +119,55 @@ export default function DataTable() {
 
     fetchTableData();
   }, []);
+
+  const handleSave = async (updatedData) => {
+    try {
+      setLoading(true);
+      await axios.put(
+        `https://nextjs-table-backend.onrender.com/api/rud-data/${updatedData.code}`,
+        updatedData,
+      );
+
+      // Refresh the table data
+      const response = await axios.get(
+        "https://nextjs-table-backend.onrender.com/api/list-data/",
+      );
+      const formattedData = response.data.map((item) => ({
+        ...item,
+        created_at: new Date(item.created_at),
+      }));
+      setTableData(formattedData);
+      setIsEditModalOpen(false);
+    } catch (error) {
+      setError("Error updating data: " + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDelete = async (code) => {
+    try {
+      setLoading(true);
+      await axios.delete(
+        `https://nextjs-table-backend.onrender.com/api/rud-data/${code}`,
+      );
+
+      // Refresh the table data
+      const response = await axios.get(
+        "https://nextjs-table-backend.onrender.com/api/list-data/",
+      );
+      const formattedData = response.data.map((item) => ({
+        ...item,
+        created_at: new Date(item.created_at),
+      }));
+      setTableData(formattedData);
+      setIsEditModalOpen(false);
+    } catch (error) {
+      setError("Error deleting data: " + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSort = (column) => {
     if (sortColumn === column) {
@@ -119,7 +192,7 @@ export default function DataTable() {
     if (selectedRows.size === filteredData.length) {
       setSelectedRows(new Set());
     } else {
-      setSelectedRows(new Set(filteredData.map(item => item.code)));
+      setSelectedRows(new Set(filteredData.map((item) => item.code)));
     }
   };
 
@@ -129,10 +202,11 @@ export default function DataTable() {
   };
 
   const handleExport = () => {
-    const dataToExport = selectedRows.size > 0 
-      ? sortedData.filter(item => selectedRows.has(item.code))
-      : sortedData;
-    
+    const dataToExport =
+      selectedRows.size > 0
+        ? sortedData.filter((item) => selectedRows.has(item.code))
+        : sortedData;
+
     const timestamp = format(new Date(), "yyyy-MM-dd_HH-mm");
     exportToCSV(dataToExport, `tasks_export_${timestamp}.csv`);
   };
@@ -142,28 +216,33 @@ export default function DataTable() {
       .join(" ")
       .toLowerCase()
       .includes(filter.toLowerCase());
-    
-    const matchesStatus = statusFilter === "all" || item.status === statusFilter;
-    const matchesPriority = priorityFilter === "all" || item.priority === priorityFilter;
-    
-    const itemDate = new Date(item.created_at);
-    const matchesDateRange = (!startDate || itemDate >= new Date(startDate)) &&
-                           (!endDate || itemDate <= new Date(endDate));
 
-    return matchesSearch && matchesStatus && matchesPriority && matchesDateRange;
+    const matchesStatus =
+      statusFilter === "all" || item.status === statusFilter;
+    const matchesPriority =
+      priorityFilter === "all" || item.priority === priorityFilter;
+
+    const itemDate = new Date(item.created_at);
+    const matchesDateRange =
+      (!startDate || itemDate >= new Date(startDate)) &&
+      (!endDate || itemDate <= new Date(endDate));
+
+    return (
+      matchesSearch && matchesStatus && matchesPriority && matchesDateRange
+    );
   });
 
   const sortedData = [...filteredData].sort((a, b) => {
     if (sortColumn) {
       const aValue = a[sortColumn];
       const bValue = b[sortColumn];
-      
-      if (sortColumn === 'created_at') {
-        return sortOrder === "asc" 
+
+      if (sortColumn === "created_at") {
+        return sortOrder === "asc"
           ? new Date(aValue) - new Date(bValue)
           : new Date(bValue) - new Date(aValue);
       }
-      
+
       if (aValue < bValue) return sortOrder === "asc" ? -1 : 1;
       if (aValue > bValue) return sortOrder === "asc" ? 1 : -1;
     }
@@ -173,13 +252,13 @@ export default function DataTable() {
   const totalPages = Math.ceil(sortedData.length / itemsPerPage);
   const paginatedData = sortedData.slice(
     (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
+    currentPage * itemsPerPage,
   );
 
   return (
     <div className="container mx-auto p-2 pb-6 sm:p-4  w-full">
       {/* Filters Section */}
-      <Dropdown/>
+      <Dropdown />
       <div className="space-y-4 mb-4">
         <div className="flex flex-col sm:flex-row gap-2 sm:items-center justify-between">
           <div className="flex flex-col sm:flex-row gap-2 sm:items-center flex-1">
@@ -193,7 +272,7 @@ export default function DataTable() {
                 className="input input-bordered w-full pl-10"
               />
             </div>
-            
+
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
@@ -205,7 +284,7 @@ export default function DataTable() {
               <option value="done">Done</option>
               <option value="canceled">Canceled</option>
             </select>
-            
+
             <select
               value={priorityFilter}
               onChange={(e) => setPriorityFilter(e.target.value)}
@@ -221,7 +300,11 @@ export default function DataTable() {
           <button
             onClick={handleExport}
             className="btn btn-primary btn-sm gap-2 whitespace-nowrap"
-            title={selectedRows.size > 0 ? "Export selected rows" : "Export all filtered rows"}
+            title={
+              selectedRows.size > 0
+                ? "Export selected rows"
+                : "Export all filtered rows"
+            }
           >
             <Download className="h-4 w-4" />
             Export CSV
@@ -258,15 +341,15 @@ export default function DataTable() {
         ) : error ? (
           <div className="text-center p-4 text-error">
             <p>Error loading data: {error}</p>
-            <button 
-              onClick={() => window.location.reload()} 
+            <button
+              onClick={() => window.location.reload()}
               className="btn btn-error btn-sm mt-2"
             >
               Retry
             </button>
           </div>
         ) : null}
-        
+
         <table className="table table-zebra w-full">
           <thead>
             <tr>
@@ -278,17 +361,29 @@ export default function DataTable() {
                   className="checkbox checkbox-sm"
                 />
               </th>
-              {["Code", "Title", "Status", "Priority", "Archived", "Created At"].map((header, index) => (
+              {[
+                "Code",
+                "Title",
+                "Status",
+                "Priority",
+                "Archived",
+                "Created At",
+              ].map((header, index) => (
                 <th
                   key={index}
-                  onClick={() => handleSort(header.toLowerCase().replace(" ", ""))}
+                  onClick={() =>
+                    handleSort(header.toLowerCase().replace(" ", ""))
+                  }
                   className="cursor-pointer"
                 >
                   <div className="flex items-center gap-1">
                     {header}
-                    {sortColumn === header.toLowerCase().replace(" ", "") && (
-                      sortOrder === "asc" ? <SortAsc className="h-4 w-4" /> : <SortDesc className="h-4 w-4" />
-                    )}
+                    {sortColumn === header.toLowerCase().replace(" ", "") &&
+                      (sortOrder === "asc" ? (
+                        <SortAsc className="h-4 w-4" />
+                      ) : (
+                        <SortDesc className="h-4 w-4" />
+                      ))}
                   </div>
                 </th>
               ))}
@@ -309,25 +404,49 @@ export default function DataTable() {
                 <td>{item.title}</td>
                 <td>
                   <div className={`badge ${statusColors[item.status]} w-full`}>
-                    {item.status === 'in-progress' ? "inprogress":item.status}
+                    {item.status === "in-progress" ? "inprogress" : item.status}
                   </div>
                 </td>
                 <td>
-                  <div className={`badge ${priorityColors[item.priority]} w-full`}>
+                  <div
+                    className={`badge ${priorityColors[item.priority]} w-full`}
+                  >
                     {item.priority}
                   </div>
                 </td>
                 <td>
-                  {item.archived ? <Check className="h-4 w-4 text-success" /> : null}
+                  {item.archived ? (
+                    <Check className="h-4 w-4 text-success" />
+                  ) : null}
                 </td>
-                <td>
-                  {format(new Date(item.created_at), "MMM d, yyyy")}
+                <td>{format(new Date(item.created_at), "MMM d, yyyy")}</td>
+
+                <td
+                  onClick={() => {
+                    setSelectedItem(item);
+                    setIsEditModalOpen(true);
+                  }}
+                  className="cursor-pointer"
+                >
+                  <EllipsisVertical />
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+
+      {/* Edit Modal */}
+      <EditModal
+        isOpen={isEditModalOpen}
+        onClose={() => {
+          setIsEditModalOpen(false);
+          setSelectedItem(null);
+        }}
+        data={selectedItem}
+        onSave={handleSave}
+        onDelete={handleDelete}
+      />
 
       {/* Pagination Section */}
       <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mt-4">
@@ -338,17 +457,21 @@ export default function DataTable() {
             onChange={(e) => handleItemsPerPageChange(Number(e.target.value))}
             className="select select-bordered select-sm"
           >
-            {PAGE_SIZE_OPTIONS.map(size => (
-              <option key={size} value={size}>{size}</option>
+            {PAGE_SIZE_OPTIONS.map((size) => (
+              <option key={size} value={size}>
+                {size}
+              </option>
             ))}
           </select>
           <span className="text-sm">entries</span>
         </div>
 
         <div className="text-sm">
-          Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, sortedData.length)} of {sortedData.length} results
+          Showing {(currentPage - 1) * itemsPerPage + 1} to{" "}
+          {Math.min(currentPage * itemsPerPage, sortedData.length)} of{" "}
+          {sortedData.length} results
         </div>
-        
+
         <div className="join">
           <button
             onClick={() => setCurrentPage(1)}
@@ -357,15 +480,15 @@ export default function DataTable() {
           >
             «
           </button>
-          
+
           <button
-            onClick={() => setCurrentPage(prev => prev - 1)}
+            onClick={() => setCurrentPage((prev) => prev - 1)}
             disabled={currentPage === 1}
             className="join-item btn btn-sm"
           >
             ‹
           </button>
-          
+
           {[...Array(totalPages)].map((_, index) => {
             if (
               index + 1 === currentPage ||
@@ -388,15 +511,15 @@ export default function DataTable() {
             }
             return null;
           })}
-          
+
           <button
-            onClick={() => setCurrentPage(prev => prev + 1)}
+            onClick={() => setCurrentPage((prev) => prev + 1)}
             disabled={currentPage === totalPages}
             className="join-item btn btn-sm"
           >
             ›
           </button>
-          
+
           <button
             onClick={() => setCurrentPage(totalPages)}
             disabled={currentPage === totalPages}
