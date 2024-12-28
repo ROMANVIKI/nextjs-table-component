@@ -10,6 +10,7 @@ import {
   Pencil,
   GripHorizontal,
   EllipsisVertical,
+  CirclePlus,
 } from "lucide-react";
 import { format } from "date-fns";
 import { useContext } from "react";
@@ -18,6 +19,7 @@ import Dropdown from "./Dropdown";
 import ModalComponent from "./ModalComponent";
 import axios from "axios";
 import EditModal from "./EditModal.jsx";
+import CreateModal from "./CreateModal";
 
 const statusColors = {
   todo: "badge-warning",
@@ -94,6 +96,12 @@ export default function DataTable() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
 
+  const [openCreateModal, setOpenCreateModal] = useState(false);
+
+  const mountCreateModal = () => {
+    setOpenCreateModal((prev) => !prev);
+  };
+
   const mountModalFunc = () => {
     setMountModal((prev) => !prev);
   };
@@ -118,7 +126,7 @@ export default function DataTable() {
     };
 
     fetchTableData();
-  }, []);
+  }, [tableData]);
 
   const handleSave = async (updatedData) => {
     try {
@@ -259,9 +267,15 @@ export default function DataTable() {
     <div className="container mx-auto p-2 pb-6 sm:p-4  w-full">
       {/* Filters Section */}
       <Dropdown />
+      {openCreateModal && (
+        <CreateModal setOpenCreateModal={setOpenCreateModal} />
+      )}
       <div className="space-y-4 mb-4">
         <div className="flex flex-col sm:flex-row gap-2 sm:items-center justify-between">
           <div className="flex flex-col sm:flex-row gap-2 sm:items-center flex-1">
+            <div onClick={mountCreateModal} className="relative flex-1/4">
+              <CirclePlus />
+            </div>
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
               <input
